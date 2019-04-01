@@ -1,25 +1,19 @@
 import os
 import re
 import sys
-
+import json
 from termcolor import colored
+from string import punctuation
 
-from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+from ntpath import split as ntsplit
+from nltk.corpus.reader import PlaintextCorpusReader
+from nltk.stem.snowball import FrenchStemmer
+
+
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 import operator
-
-
-def cleanData(sentence):
-    # sentence = re.sub('[^A-Za-z0-9 ]+', '', sentence)
-    # sentence filter(None, re.split("[.!?", setence))
-    ret = []
-    sentence = stemmer.stem(sentence)
-    for word in sentence.split():
-        if not word in stopwords:
-            ret.append(word)
-    return " ".join(ret)
 
 
 def getVectorSpace(cleanSet):
@@ -51,34 +45,54 @@ def calculateSimilarity(sentence, doc):
 
 
 def load_stopwords(stopwords_file):
-    f = file("stopword.txt", "r")
-    return f.readlines()
+    with open(stopwords_file) as f:
+        return json.load(f)["fr"]
 
 
-def load_sentences(text_file):
-    data = file(sys.argv[1], "r")
-    texts = data.readlines()
+def cleanData(sentence):
+    # remove stopwords
+    # sentence = re.sub('[^A-Za-z0-9 ]+', '', sentence)
+    # sentence filter(None, re.split("[.!?", setence))
+    ret = []
+    sentence = stemmer.stem(sentence)
+    for word in sentence.split():
+        if not word in stopwords:
+            ret.append(word)
+    return " ".join(ret)
 
-    sentences = []
+
+def stemmize(fs, sent, stopwords):
+    clean_sent = []
+    for word in sent:
+        stem = fs.stem(word)
+        if word not in stopwords and word not in punctuation:
+            clean_sent.append(stem)
+    return clean_sent
+
+
+def load_sentences(text_file, stopwords):
+    path, f = ntsplit(text_file)
+    reader = PlaintextCorpusReader(path, f)
+    sentences = [sent for sent in reader.sents()]
     clean = []
     originalSentenceOf = {}
+    fs = FrenchStemmer()
     # Data cleansing
-    for line in texts:
-        parts = line.split(".")
-        for part in parts:
-            cl = cleanData(part)
-            # print cl
-            sentences.append(part)
-            clean.append(cl)
-            originalSentenceOf[cl] = part
+    for sent in sentences:
+        s = stemmize(fs, sent, stopwords)
+        clean.append(" ".join(s))
+        originalSentenceOf[clean[-1]] = sent
     setClean = set(clean)
+    print(clean)
 
     return setClean, originalSentenceOf, sentences, clean
 
 
 def load_data(stopwords_file, text_file):
     stopwords = load_stopwords(stopwords_file)
-    setClean, originalSentenceOf, sentences, clean = load_sentences(text_file)
+    setClean, originalSentenceOf, sentences, clean = load_sentences(
+        text_file, stopwords
+    )
 
     return stopwords, setClean, originalSentenceOf, sentences, clean
 
@@ -93,9 +107,9 @@ def compute_similarity_scores(clean, setClean):
     return scores
 
 
-def summarize_mmr(scores):
+def summarize_mmr(scores, sentences):
     # calculate MMR
-    n = 20 * len(sentences) / 100
+    n = 30 * len(sentences) / 100
     alpha = 0.5
     summarySet = []
     while n > 0:
@@ -105,36 +119,38 @@ def summarize_mmr(scores):
                 mmr[sentence] = alpha * scores[sentence] - (
                     1 - alpha
                 ) * calculateSimilarity(sentence, summarySet)
-        selected = max(mmr.iteritems(), key=operator.itemgetter(1))[0]
+        selected = max(mmr.items(), key=operator.itemgetter(1))[0]
         summarySet.append(selected)
         n -= 1
     return summarySet
 
 
-def show_results(summarySet):
+def show_results(summarySet, originalSentenceOf, clean):
 
     print("\nSummary:\n")
     for sentence in summarySet:
-        print(originalSentenceOf[sentence].lstrip(" "))
+        print(" ".join(originalSentenceOf[sentence]))
     print()
 
     print("=============================================================")
     print("\nOriginal Passages:\n")
     for sentence in clean:
         if sentence in summarySet:
-            print(colored(originalSentenceOf[sentence].lstrip(" "), "red"))
+            print(colored(" ".join(originalSentenceOf[sentence]), "red"))
         else:
-            print(originalSentenceOf[sentence].lstrip(" "))
+            print(" ".join(originalSentenceOf[sentence]))
 
 
 def main():
     stopwords_file = "stopwords.json"
-    text_file = "tosummarize.txt"
+    text_file = "sample.txt"
     stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
         stopwords_file, text_file
     )
-    factory = StemmerFactory()
-    stemmer = factory.create_stemmer()
     scores = compute_similarity_scores(clean, setClean)
-    summary = summarize_mmr(scores)
-    show_results(summary)
+    summary = summarize_mmr(scores, sentences)
+    show_results(summary, originalSentenceOf, clean)
+
+
+if __name__ == "__main__":
+    main()
