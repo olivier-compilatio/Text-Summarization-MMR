@@ -18,8 +18,6 @@ The MMR criterion strives to reduce redudancy while maintaining the content rele
 
 ## How to run
 
-- In you terminal type it as ```python mmr.py [Document.txt]```
+- In you terminal type it as ```python mmr.py -t document.txt -s stopwords_file -p percentage_of-sentences_to_keep```
 
-## Output
 
-![MMR Output](https://github.com/fajri91/document/blob/master/mmr.jpg)
