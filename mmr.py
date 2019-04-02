@@ -4,7 +4,7 @@ import sys
 import json
 from termcolor import colored
 from string import punctuation
-
+import argparse
 from ntpath import split as ntsplit
 from nltk.corpus.reader import PlaintextCorpusReader
 from nltk.stem.snowball import FrenchStemmer
@@ -83,8 +83,6 @@ def load_sentences(text_file, stopwords):
         clean.append(" ".join(s))
         originalSentenceOf[clean[-1]] = sent
     setClean = set(clean)
-    print(clean)
-
     return setClean, originalSentenceOf, sentences, clean
 
 
@@ -142,8 +140,25 @@ def show_results(summarySet, originalSentenceOf, clean):
 
 
 def main():
-    stopwords_file = "stopwords.json"
-    text_file = "sample.txt"
+    def parse_arguments():
+        parser = argparse.ArgumentParser(description="simple mmr for French")
+        parser.add_argument(
+            "-t", "--text", help="file to summarize", default="sample.txt"
+        )
+        parser.add_argument(
+            "-s",
+            "--stopwords",
+            help="json file containing stopwords for french (fr) ",
+            default="stopwords.json",
+        )
+
+        return parser.parse_args()
+
+    args = parse_arguments()
+    stopwords_file = args.stopwords
+    text_file = args.text
+    print("text file :", text_file, file=sys.stderr)
+    print("stopwords file", stopwords_file, file=sys.stderr, end="\n\n\n")
     stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
         stopwords_file, text_file
     )
