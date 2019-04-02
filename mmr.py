@@ -16,19 +16,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 import operator
 
 
-def getVectorSpace(cleanSet):
-    vocab = {}
-    for data in cleanSet:
-        for word in data.split():
-            vocab[data] = 0
-    return vocab.keys()
+# def getVectorSpace(cleanSet):
+#     vocab = {}
+#     for data in cleanSet:
+#         for word in data.split():
+#             print("woard", word)
+#             vocab[data] = 0
+#     return vocab.keys()
 
 
 def calculateSimilarity(sentence, doc):
     if doc == []:
         return 0
     vocab = {}
-    for word in sentence:
+    for word in sentence.split(" "):
         vocab[word] = 0
 
     docInOneSentence = ""
