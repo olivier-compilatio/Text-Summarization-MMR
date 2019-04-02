@@ -105,9 +105,9 @@ def compute_similarity_scores(clean, setClean):
     return scores
 
 
-def summarize_mmr(scores, sentences):
+def summarize_mmr(scores, sentences, percent):
     # calculate MMR
-    n = 30 * len(sentences) / 100
+    n = percent * len(sentences) / 100
     alpha = 0.5
     summarySet = []
     while n > 0:
@@ -151,19 +151,27 @@ def main():
             help="json file containing stopwords for french (fr) ",
             default="stopwords.json",
         )
+        parser.add_argument(
+            "-p",
+            "--percent",
+            type=int,
+            help="percentage of sentences to use for summary",
+            default=20,
+        )
 
         return parser.parse_args()
 
     args = parse_arguments()
     stopwords_file = args.stopwords
     text_file = args.text
+    percent = args.percent
     print("text file :", text_file, file=sys.stderr)
     print("stopwords file", stopwords_file, file=sys.stderr, end="\n\n\n")
     stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
         stopwords_file, text_file
     )
     scores = compute_similarity_scores(clean, setClean)
-    summary = summarize_mmr(scores, sentences)
+    summary = summarize_mmr(scores, sentences, percent)
     show_results(summary, originalSentenceOf, clean)
 
 
