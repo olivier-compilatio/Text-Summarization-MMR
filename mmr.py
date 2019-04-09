@@ -7,7 +7,7 @@ from string import punctuation
 import argparse
 from ntpath import split as ntsplit
 from nltk.corpus.reader import PlaintextCorpusReader
-from nltk.stem.snowball import FrenchStemmer
+from nltk.stem.snowball import FrenchStemmer, SnowballStemmer
 
 
 from sklearn.feature_extraction.text import CountVectorizer
@@ -45,9 +45,9 @@ def calculateSimilarity(sentence, doc):
     return cosine_similarity(docVector, sentenceVector)[0][0]
 
 
-def load_stopwords(stopwords_file):
+def load_stopwords(stopwords_file, lang):
     with open(stopwords_file) as f:
-        return json.load(f)["fr"]
+        return json.load(f)[lang]
 
 
 def cleanData(sentence):
@@ -62,35 +62,38 @@ def cleanData(sentence):
     return " ".join(ret)
 
 
-def stemmize(fs, sent, stopwords):
+def stemmize(stemmer, sent, stopwords):
     clean_sent = []
     for word in sent:
-        stem = fs.stem(word)
+        stem = stemmer.stem(word)
         if word not in stopwords and word not in punctuation:
             clean_sent.append(stem)
     return clean_sent
 
 
-def load_sentences(text_file, stopwords):
+def load_sentences(text_file, stopwords, lang):
     path, f = ntsplit(text_file)
     reader = PlaintextCorpusReader(path, f)
     sentences = [sent for sent in reader.sents()]
     clean = []
     originalSentenceOf = {}
-    fs = FrenchStemmer()
+    if lang == "fr":
+        stemmer = FrenchStemmer()
+    elif lang == "en":
+        stemmer = SnowballStemmer("english")
     # Data cleansing
     for sent in sentences:
-        s = stemmize(fs, sent, stopwords)
+        s = stemmize(stemmer, sent, stopwords)
         clean.append(" ".join(s))
         originalSentenceOf[clean[-1]] = sent
     setClean = set(clean)
     return setClean, originalSentenceOf, sentences, clean
 
 
-def load_data(stopwords_file, text_file):
-    stopwords = load_stopwords(stopwords_file)
+def load_data(stopwords_file, text_file, lang):
+    stopwords = load_stopwords(stopwords_file, lang)
     setClean, originalSentenceOf, sentences, clean = load_sentences(
-        text_file, stopwords
+        text_file, stopwords, lang
     )
 
     return stopwords, setClean, originalSentenceOf, sentences, clean
@@ -149,7 +152,7 @@ def main():
         parser.add_argument(
             "-s",
             "--stopwords",
-            help="json file containing stopwords for french (fr) ",
+            help="json file containing stopwords for multiple languages ",
             default="stopwords.json",
         )
         parser.add_argument(
@@ -159,17 +162,31 @@ def main():
             help="percentage of sentences to use for summary",
             default=20,
         )
+        parser.add_argument(
+            "-l", "--lang", type=str, help="language of the input text", default="fr"
+        )
 
-        return parser.parse_args()
+        args = parser.parse_args()
+
+        if args.lang.lower() in ("french", "fr"):
+            args.lang = "fr"
+        elif args.lang.lower() in ("english", "en"):
+            args.lang = "en"
+        else:
+            raise Exception("Unknown lang ", args.lang)
+
+        return args
 
     args = parse_arguments()
     stopwords_file = args.stopwords
     text_file = args.text
     percent = args.percent
+
+    lang = args.lang
     print("text file :", text_file, file=sys.stderr)
     print("stopwords file", stopwords_file, file=sys.stderr, end="\n\n\n")
     stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
-        stopwords_file, text_file
+        stopwords_file, text_file, lang
     )
     scores = compute_similarity_scores(clean, setClean)
     summary = summarize_mmr(scores, sentences, percent)
