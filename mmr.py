@@ -143,7 +143,7 @@ def show_results(summarySet, originalSentenceOf, clean):
             print(" ".join(originalSentenceOf[sentence]))
 
 
-def run_mmr(stopwords_file, text_file, lang):
+def run_mmr(stopwords_file, text_file, lang, percent):
     stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
         stopwords_file, text_file, lang
     )
