@@ -143,6 +143,15 @@ def show_results(summarySet, originalSentenceOf, clean):
             print(" ".join(originalSentenceOf[sentence]))
 
 
+def run_mmr(stopwords_file, text_file, lang):
+    stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
+        stopwords_file, text_file, lang
+    )
+    scores = compute_similarity_scores(clean, setClean)
+    summary = summarize_mmr(scores, sentences, percent)
+    show_results(summary, originalSentenceOf, clean)
+
+
 def main():
     def parse_arguments():
         parser = argparse.ArgumentParser(description="simple mmr for French")
@@ -185,12 +194,8 @@ def main():
     lang = args.lang
     print("text file :", text_file, file=sys.stderr)
     print("stopwords file", stopwords_file, file=sys.stderr, end="\n\n\n")
-    stopwords, setClean, originalSentenceOf, sentences, clean = load_data(
-        stopwords_file, text_file, lang
-    )
-    scores = compute_similarity_scores(clean, setClean)
-    summary = summarize_mmr(scores, sentences, percent)
-    show_results(summary, originalSentenceOf, clean)
+
+    run_mmr(stopwords_file, text_file, lang)
 
 
 if __name__ == "__main__":
